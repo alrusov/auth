@@ -38,6 +38,11 @@ type (
 	}
 )
 
+const (
+	// HTTP заголовок
+	Header = "Authorization"
+)
+
 var (
 	// Log --
 	Log = log.NewFacility("stdhttp.auth")
