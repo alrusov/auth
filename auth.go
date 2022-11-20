@@ -34,7 +34,7 @@ type (
 		Method string
 		User   string
 		Groups []string
-		Extra  interface{}
+		Extra  any
 	}
 )
 
