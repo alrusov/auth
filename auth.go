@@ -22,7 +22,7 @@ type (
 
 	// Handler --
 	Handler interface {
-		Init(cfg *config.Listener) error
+		Init(lCfg *config.Listener) error
 		Enabled() bool
 		Score() int
 		WWWAuthHeader() (name string, withRealm bool)
@@ -36,6 +36,12 @@ type (
 		Groups []string
 		Extra  any
 	}
+
+	IdentityProvider interface {
+		Init(aCfg *config.Auth) (err error)
+		GetIdentity(u string) (identity *Identity, err error)
+		Check(u string, p string, hashedPassword bool) (identity *Identity, exists bool, err error)
+	}
 )
 
 const (
@@ -46,12 +52,19 @@ const (
 var (
 	// Log --
 	Log = log.NewFacility("stdhttp.auth")
+
+	stdIdentityProviders []IdentityProvider
 )
 
 //----------------------------------------------------------------------------------------------------------------------------//
 
 // NewHandlers --
 func NewHandlers(cfg *config.Listener) *Handlers {
+	if len(stdIdentityProviders) == 0 {
+		provider := &LocalIdentityProvider{}
+		_ = AddStdIdentityProvider(provider, &cfg.Auth)
+	}
+
 	return &Handlers{
 		mutex: new(sync.RWMutex),
 		cfg:   cfg,
@@ -231,6 +244,39 @@ func (identity *Identity) checkPermissions(permissions misc.BoolMap) bool {
 // Hash --
 func Hash(p []byte, salt []byte) []byte {
 	return misc.Sha512Hash(append(p, salt...))
+}
+
+//----------------------------------------------------------------------------------------------------------------------------//
+
+func AddStdIdentityProvider(provider IdentityProvider, aCfg *config.Auth) (err error) {
+	stdIdentityProviders = append(stdIdentityProviders, provider)
+	return provider.Init(aCfg)
+}
+
+//----------------------------------------------------------------------------------------------------------------------------//
+
+func StdGetIdentity(u string) (identity *Identity, err error) {
+	for _, provider := range stdIdentityProviders {
+		identity, err = provider.GetIdentity(u)
+		if identity != nil || err != nil {
+			return
+		}
+	}
+
+	return nil, nil
+}
+
+//----------------------------------------------------------------------------------------------------------------------------//
+
+func StdCheckUser(u string, p string, hashedPassword bool) (identity *Identity, exists bool, err error) {
+	for _, provider := range stdIdentityProviders {
+		identity, exists, err = provider.Check(u, p, hashedPassword)
+		if exists || err != nil {
+			return
+		}
+	}
+
+	return nil, false, nil
 }
 
 //----------------------------------------------------------------------------------------------------------------------------//
