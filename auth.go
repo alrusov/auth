@@ -26,7 +26,7 @@ type (
 		Enabled() bool
 		Score() int
 		WWWAuthHeader() (name string, withRealm bool)
-		Check(id uint64, prefix string, path string, w http.ResponseWriter, r *http.Request) (identity *Identity, tryNext bool)
+		Check(id uint64, prefix string, path string, w http.ResponseWriter, r *http.Request) (identity *Identity, tryNext bool, err error)
 	}
 
 	// Identity --
@@ -173,11 +173,15 @@ func (hh *Handlers) Check(id uint64, prefix string, path string, permissions mis
 	}
 
 	tryNext := false
-
+	var err error
 	for _, ah := range hh.list {
-		identity, tryNext = ah.Check(id, prefix, path, w, r)
+		identity, tryNext, err = ah.Check(id, prefix, path, w, r)
 
-		if identity != nil && identity.checkPermissions(permissions) {
+		if identity != nil {
+			if !identity.checkPermissions(permissions) {
+				code = http.StatusForbidden
+				msg = "Forbidden"
+			}
 			return
 		}
 
@@ -186,16 +190,12 @@ func (hh *Handlers) Check(id uint64, prefix string, path string, permissions mis
 		}
 	}
 
-	identity = nil
-
-	if tryNext {
-		code = http.StatusUnauthorized
-		msg = "Unauthorised"
+	code = http.StatusUnauthorized
+	if err != nil {
+		msg = err.Error()
 		return
 	}
-
-	code = http.StatusForbidden
-	msg = "Forbidden"
+	msg = "Unauthorised"
 	return
 }
 
