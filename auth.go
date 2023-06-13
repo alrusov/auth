@@ -31,10 +31,12 @@ type (
 
 	// Identity --
 	Identity struct {
-		Method string
-		User   string
-		Groups []string
-		Extra  any
+		Method  string
+		User    string
+		Groups  []string
+		Extra   any
+		Type    string
+		IsAdmin bool
 	}
 
 	IdentityProvider interface {

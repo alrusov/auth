@@ -10,6 +10,8 @@ type (
 	}
 )
 
+const Type = "LocalIdentity"
+
 //----------------------------------------------------------------------------------------------------------------------------//
 
 func (provider *LocalIdentityProvider) Init(aCfg *config.Auth) (err error) {
@@ -25,9 +27,20 @@ func (provider *LocalIdentityProvider) GetIdentity(u string) (identity *Identity
 		return nil, nil
 	}
 
+	isAdmin := false
+
+	for _, group := range userDef.Groups {
+		if _, ok := provider.aCfg.LocalAdminGroupsMap[group]; ok {
+			isAdmin = true
+			break
+		}
+	}
+
 	return &Identity{
-			User:   u,
-			Groups: userDef.Groups,
+			User:    u,
+			Groups:  userDef.Groups,
+			Type:    Type,
+			IsAdmin: isAdmin,
 		},
 		nil
 }
@@ -49,10 +62,20 @@ func (provider *LocalIdentityProvider) Check(u string, p string, hashedPassword 
 			return nil, true, nil
 		}
 	}
+	isAdmin := false
+
+	for _, group := range userDef.Groups {
+		if _, ok := provider.aCfg.LocalAdminGroupsMap[group]; ok {
+			isAdmin = true
+			break
+		}
+	}
 
 	return &Identity{
-			User:   u,
-			Groups: userDef.Groups,
+			User:    u,
+			Groups:  userDef.Groups,
+			Type:    Type,
+			IsAdmin: isAdmin,
 		},
 		true,
 		nil
