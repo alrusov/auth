@@ -40,8 +40,8 @@ func (ah *testHandler) WWWAuthHeader() (name string, withRealm bool) {
 }
 
 // Check --
-func (ah *testHandler) Check(id uint64, prefix string, path string, w http.ResponseWriter, r *http.Request) (identity *Identity, tryNext bool) {
-	return nil, false
+func (ah *testHandler) Check(id uint64, prefix string, path string, w http.ResponseWriter, r *http.Request) (identity *Identity, exists bool, err error) {
+	return nil, true, nil
 }
 
 //----------------------------------------------------------------------------------------------------------------------------//
