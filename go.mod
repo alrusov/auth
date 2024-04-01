@@ -1,11 +1,11 @@
 module github.com/alrusov/auth
 
-go 1.20
+go 1.22.1
 
 require (
-	github.com/alrusov/config v0.1.57
+	github.com/alrusov/config v0.1.58
 	github.com/alrusov/log v0.1.37
-	github.com/alrusov/misc v1.1.8
+	github.com/alrusov/misc v1.1.12
 )
 
 require (
