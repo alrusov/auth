@@ -10,7 +10,7 @@ type (
 	}
 )
 
-const Type = "LocalIdentity"
+const LocalIdentityType = "LocalIdentity"
 
 //----------------------------------------------------------------------------------------------------------------------------//
 
@@ -39,7 +39,7 @@ func (provider *LocalIdentityProvider) GetIdentity(u string) (identity *Identity
 	return &Identity{
 			User:    u,
 			Groups:  userDef.Groups,
-			Type:    Type,
+			Type:    LocalIdentityType,
 			IsAdmin: isAdmin,
 		},
 		nil
@@ -74,7 +74,7 @@ func (provider *LocalIdentityProvider) Check(u string, p string, hashedPassword 
 	return &Identity{
 			User:    u,
 			Groups:  userDef.Groups,
-			Type:    Type,
+			Type:    LocalIdentityType,
 			IsAdmin: isAdmin,
 		},
 		true,
