@@ -156,7 +156,11 @@ func (hh *Handlers) WriteAuthRequestHeaders(w http.ResponseWriter, prefix string
 
 		s := name
 		if withRealm {
-			s = fmt.Sprintf(`%s realm="%s%s"`, name, prefix, path)
+			realm := hh.cfg.Auth.Realm
+			if realm == "" {
+				realm = prefix + path
+			}
+			s = fmt.Sprintf(`%s realm="%s"`, name, realm)
 		}
 
 		w.Header().Add("WWW-Authenticate", s)
