@@ -15,9 +15,9 @@ import (
 type (
 	// Handlers --
 	Handlers struct {
-		mutex *sync.RWMutex
-		cfg   *config.Listener
-		list  []Handler
+		sync.RWMutex
+		cfg  *config.Listener
+		list []Handler
 	}
 
 	// Handler --
@@ -70,8 +70,7 @@ func NewHandlers(cfg *config.Listener) *Handlers {
 	}
 
 	return &Handlers{
-		mutex: new(sync.RWMutex),
-		cfg:   cfg,
+		cfg: cfg,
 	}
 }
 
@@ -79,8 +78,8 @@ func NewHandlers(cfg *config.Listener) *Handlers {
 
 // Add --
 func (hh *Handlers) Add(ah Handler) (err error) {
-	hh.mutex.Lock()
-	defer hh.mutex.Unlock()
+	hh.Lock()
+	defer hh.Unlock()
 
 	err = ah.Init(hh.cfg)
 	if err != nil {
@@ -131,8 +130,8 @@ func (hh *Handlers) add(ah Handler) {
 
 // Enabled --
 func (hh *Handlers) Enabled() bool {
-	hh.mutex.RLock()
-	defer hh.mutex.RUnlock()
+	hh.RLock()
+	defer hh.RUnlock()
 
 	return len(hh.list) > 0
 }
@@ -141,8 +140,8 @@ func (hh *Handlers) Enabled() bool {
 
 // WriteAuthRequestHeaders --
 func (hh *Handlers) WriteAuthRequestHeaders(w http.ResponseWriter, prefix string, path string) {
-	hh.mutex.RLock()
-	defer hh.mutex.RUnlock()
+	hh.RLock()
+	defer hh.RUnlock()
 
 	if len(hh.list) == 0 {
 		return
@@ -171,8 +170,8 @@ func (hh *Handlers) WriteAuthRequestHeaders(w http.ResponseWriter, prefix string
 
 // Check --
 func (hh *Handlers) Check(id uint64, prefix string, path string, permissions misc.BoolMap, w http.ResponseWriter, r *http.Request) (identity *Identity, code int, msg string) {
-	hh.mutex.RLock()
-	defer hh.mutex.RUnlock()
+	hh.RLock()
+	defer hh.RUnlock()
 
 	code = 0
 
