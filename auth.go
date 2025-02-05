@@ -209,6 +209,10 @@ func (hh *Handlers) Check(id uint64, prefix string, path string, permissions mis
 //----------------------------------------------------------------------------------------------------------------------------//
 
 func (identity *Identity) checkPermissions(permissions misc.BoolMap) bool {
+	if identity.IsAdmin {
+		return true
+	}
+
 	if len(permissions) == 0 {
 		return false
 	}
