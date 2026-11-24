@@ -53,14 +53,8 @@ func (provider *LocalIdentityProvider) Check(u string, p string, hashedPassword 
 		return nil, false, nil
 	}
 
-	if hashedPassword {
-		if userDef.Password != p {
-			return nil, true, nil
-		}
-	} else {
-		if userDef.Password != string(Hash([]byte(p), []byte(u))) {
-			return nil, true, nil
-		}
+	if !PasswordMatch(userDef.Password, p, u, hashedPassword) {
+		return nil, true, nil
 	}
 	isAdmin := false
 

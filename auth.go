@@ -1,8 +1,10 @@
 package auth
 
 import (
+	"crypto/subtle"
 	"fmt"
 	"net/http"
+	"strings"
 	"sync"
 
 	"github.com/alrusov/config"
@@ -197,11 +199,13 @@ func (hh *Handlers) Check(id uint64, prefix string, path string, permissions mis
 		}
 	}
 
-	code = http.StatusUnauthorized
+	// Причину отказа (неизвестный пользователь, неверный пароль, разбор токена) клиенту не отдаём:
+	// по ней можно перебирать логины. Методы пишут её в журнал сами, здесь - на уровне DEBUG
 	if err != nil {
-		msg = err.Error()
-		return
+		Log.Message(log.DEBUG, `[%d] Unauthorised: %s`, id, err)
 	}
+
+	code = http.StatusUnauthorized
 	msg = "Unauthorised"
 	return
 }
@@ -210,6 +214,7 @@ func (hh *Handlers) Check(id uint64, prefix string, path string, permissions mis
 
 func (identity *Identity) checkPermissions(permissions misc.BoolMap) bool {
 	if identity.IsAdmin {
+		// Администратора запреты не касаются
 		return true
 	}
 
@@ -217,37 +222,39 @@ func (identity *Identity) checkPermissions(permissions misc.BoolMap) bool {
 		return false
 	}
 
-	user := identity.User
+	// Запрет главнее разрешения всегда, независимо от уровня правила:
+	// "!user", "!@group" или "!*" отказывают, даже если пользователь разрешён явно или через другую группу.
+	// Доступ есть, если нет ни одного подходящего запрета и есть хотя бы одно подходящее разрешение.
 
-	p, exists := permissions[user]
-	if exists {
-		return p
-	}
+	allowed := false
 
-	if len(identity.Groups) > 0 {
-		enabled := false
-
-		for _, g := range identity.Groups {
-			p, exists := permissions["@"+g]
-			if exists {
-				if !p {
-					return false
-				}
-				enabled = true
-			}
+	check := func(name string) (denied bool) {
+		p, exists := permissions[name]
+		if !exists {
+			return false
 		}
-
-		if enabled {
+		if !p {
 			return true
 		}
+		allowed = true
+		return false
 	}
 
-	p, exists = permissions["*"]
-	if exists {
-		return p
+	if check(identity.User) {
+		return false
 	}
 
-	return false
+	for _, g := range identity.Groups {
+		if check("@" + g) {
+			return false
+		}
+	}
+
+	if check("*") {
+		return false
+	}
+
+	return allowed
 }
 
 //----------------------------------------------------------------------------------------------------------------------------//
@@ -288,6 +295,24 @@ func StdCheckUser(u string, p string, hashedPassword bool) (identity *Identity, 
 	}
 
 	return nil, false, nil
+}
+
+//----------------------------------------------------------------------------------------------------------------------------//
+
+// PasswordMatch -- проверка пароля пользователя u.
+// stored -- хеш из хранилища (см. Hash), p -- переданный пароль или, при hashedPassword, его хеш.
+// Пустой хранимый хеш или пустой переданный пароль не совпадают никогда: иначе при hashedPassword
+// пользователь без пароля входил бы с пустым p. Хеши сравниваются без учёта регистра и за постоянное время.
+func PasswordMatch(stored string, p string, u string, hashedPassword bool) bool {
+	if stored == "" || p == "" {
+		return false
+	}
+
+	if !hashedPassword {
+		p = string(Hash([]byte(p), []byte(u)))
+	}
+
+	return subtle.ConstantTimeCompare([]byte(strings.ToLower(stored)), []byte(strings.ToLower(p))) == 1
 }
 
 //----------------------------------------------------------------------------------------------------------------------------//
